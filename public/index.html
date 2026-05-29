@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1HP // Neon Cyberpunk Multiplayer Duel</title>
+  <!-- Google Fonts: Orbitron & Rajdhani for premium tech typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css?v=2.0.14">
+  <!-- Libraries (Socket.IO & Phaser 3 loaded locally) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/phaser.min.js"></script>
+</head>
+<body>
+
+  <!-- Cyberpunk background grids and scanlines overlay -->
+  <div class="scanlines"></div>
+  <div class="cyber-grid"></div>
+
+  <!-- Audio Controls overlay -->
+  <div class="audio-controls">
+    <button id="music-toggle-btn" class="cyber-btn-small glow-cyan">
+      <span class="btn-text">MUSIC: ON</span>
+    </button>
+  </div>
+
+  <!-- Main Game Frame Portal -->
+  <div id="app-wrapper">
+    
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- MAIN MENU CONTAINER -->
+    <div id="menu-screen" class="screen active">
+      <div class="cyber-brand">
+        <h1 class="glitch-text" data-text="1HP">1HP</h1>
+        <p class="subtitle">// ONE HIT. INSTANT KILL. BRUTAL DUELS. //</p>
+      </div>
+
+      <div class="cyber-form glow-pink">
+        <div class="form-title">INITIATE NETWORK IDENTITY</div>
+        
+        <div class="input-wrapper">
+          <input type="text" id="username-input" maxlength="12" placeholder="ENTER CODENAME..." autocomplete="off">
+          <span class="input-line"></span>
+        </div>
+
+        <div class="menu-actions">
+          <button id="quick-play-btn" class="cyber-btn glow-cyan">
+            <div class="btn-glitch-overlay"></div>
+            <span class="btn-text">QUICK PLAY</span>
+          </button>
+          
+          <div class="menu-divider">
+            <span>OR CREATE ROOM</span>
+          </div>
+
+          <button id="create-room-btn" class="cyber-btn glow-pink">
+            <span class="btn-text">CREATE LOBBY</span>
+          </button>
+
+          <div class="menu-divider">
+            <span>OR JOIN ROOM</span>
+          </div>
+
+          <div class="join-room-wrapper">
+            <input type="text" id="room-code-input" maxlength="4" placeholder="CODE" autocomplete="off">
+            <button id="join-room-btn" class="cyber-btn glow-yellow">
+              <span class="btn-text">JOIN</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="screen hidden">
+      <div class="cyber-lobby glow-cyan">
+        <h2 class="lobby-title">// ENCRYPTED NET-LOBBY //</h2>
+        
+        <div class="lobby-code-box" style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+          <span class="code-label">ACCESS KEY:</span>
+          <span id="lobby-code-display" class="code-value glow-text-cyan">----</span>
+          <button id="lobby-copy-link-btn" class="cyber-btn-small glow-cyan" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 3px;">
+            <span class="btn-text">COPY COM-LINK</span>
+          </button>
+        </div>
+
+        <div class="lobby-status">
+          <span class="status-dot pulse-neon-red"></span>
+          <span id="lobby-status-text">AWAITING TARGET SIGNAL...</span>
+        </div>
+
+        <div class="players-list-wrapper">
+          <div class="players-header">CONNECTED CYBER-COMBATANTS</div>
+          <div id="players-list" class="players-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Cybernetic Neon Color Picker (In-Lobby Customization) -->
+        <div class="color-picker-wrapper glow-pink" style="border: 1px solid rgba(255, 0, 85, 0.15); padding: 12px; border-radius: 4px; background: rgba(0,0,0,0.3); margin-top: -10px;">
+          <div class="color-picker-label">CHOOSE NEON CHASSIS EMISSION</div>
+          <div class="color-options" style="margin-top: 8px;">
+            <div class="color-option active" data-color="#00f0ff" style="background-color: #00f0ff; box-shadow: 0 0 10px #00f0ff;"></div>
+            <div class="color-option" data-color="#ff0055" style="background-color: #ff0055;"></div>
+            <div class="color-option" data-color="#00ff66" style="background-color: #00ff66;"></div>
+            <div class="color-option" data-color="#fffb00" style="background-color: #fffb00;"></div>
+            <div class="color-option" data-color="#ff6600" style="background-color: #ff6600;"></div>
+            <div class="color-option" data-color="#b026ff" style="background-color: #b026ff;"></div>
+          </div>
+        </div>
+
+        <!-- Host Match Options -->
+        <div class="lobby-settings-panel glow-cyan">
+          <div class="settings-title">// MATCH CONFIGURATION //</div>
+          
+          <div class="settings-row">
+            <label for="lobby-best-of">MATCH FORMAT:</label>
+            <select id="lobby-best-of" class="cyber-select">
+              <option value="3">BEST OF 3 (2 WINS)</option>
+              <option value="5" selected>BEST OF 5 (3 WINS)</option>
+              <option value="7">BEST OF 7 (4 WINS)</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label for="lobby-shrink-speed">STORM VELOCITY:</label>
+            <select id="lobby-shrink-speed" class="cyber-select">
+              <option value="fast">CRITICAL (30S)</option>
+              <option value="normal" selected>STABLE (45S)</option>
+              <option value="slow">TACTICAL (60S)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Lobby Chat Area -->
+        <div class="lobby-chat-container glow-cyan">
+          <div class="lobby-chat-header">// SECURE LOBBY COM-LINK //</div>
+          <div id="lobby-chat-messages" class="lobby-chat-messages">
+            <div class="chat-message system"><span class="msg-username">SYSTEM:</span> COM-LINK ENCRYPTED. READY FOR TARGET DISCUSSIONS.</div>
+          </div>
+          <div class="lobby-chat-input-wrapper">
+            <input type="text" id="lobby-chat-input" maxlength="60" placeholder="TRANSMIT COM-SIGNAL... [ENTER]" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="lobby-actions">
+          <button id="lobby-start-btn" class="cyber-btn glow-green disabled" disabled style="display: none;">
+            <span class="btn-text">START DUEL</span>
+          </button>
+          
+          <button id="leave-lobby-btn" class="cyber-btn-secondary glow-red-text">
+            <span class="btn-text">DISCONNECT TERMINAL</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IN-GAME HUD OVERLAYS -->
+    <div id="game-screen" class="screen hidden">
+      <!-- Phaser Canvas Anchor -->
+      <div id="phaser-game-div"></div>
+
+      <!-- Centered Cyberpunk Scoreboard Overlay (View on TAB hold) -->
+      <div id="hud-scoreboard-overlay" class="hud-scoreboard-overlay hidden">
+        <div class="scoreboard-content glow-pink">
+          <div class="scoreboard-header">// CYBER-NET DUEL LEADERBOARD //</div>
+          <div class="scoreboard-subheader">RELEASE [TAB] KEY TO RETURN TO COMBAT FEED</div>
+          <div id="scoreboard-players-list" class="scoreboard-players-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Centered Cyberpunk Round Resolved Scoreboard Overlay (Auto Pop-up) -->
+      <div id="hud-round-resolved-overlay" class="hud-round-resolved-overlay hidden">
+        <div class="round-resolved-content glow-cyan">
+          <div id="round-resolved-title" class="round-resolved-header">// ROUND COMPLETED //</div>
+          <div id="round-resolved-winner" class="round-resolved-winner glow-text-cyan">ROUND WINNER: PLAYER</div>
+          <div class="round-resolved-subheader">PREPARING ARENA FOR NEXT ENGAGEMENT...</div>
+          <div id="round-resolved-table-body" class="round-resolved-players-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Floating HUD -->
+      <div class="hud-top">
+        <div id="hud-players-list-left" class="hud-players-column"></div>
+
+        <div class="hud-center">
+          <div class="hud-timer-box">
+            <span class="timer-label">CLOCK</span>
+            <span id="hud-timer-value" class="timer-value">60</span>
+          </div>
+          <div id="hud-round-label" class="hud-round-label">ROUND 1</div>
+        </div>
+
+        <div id="hud-players-list-right" class="hud-players-column"></div>
+      </div>
+
+      <!-- Live Killfeed (top right) -->
+      <div id="hud-killfeed" class="hud-killfeed"></div>
+
+      <!-- Action Hotkeys / Cooldowns (bottom center overlay) -->
+      <div class="hud-cooldowns-hud">
+        <div class="cooldown-item">
+          <div class="cooldown-ring-wrapper">
+            <svg class="cooldown-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="cooldown-dash-ring" class="ring-fg glow-stroke-cyan" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <span class="cooldown-key">SHIFT</span>
+          </div>
+          <span class="cooldown-label">DASH</span>
+        </div>
+
+        <div class="cooldown-item">
+          <div class="cooldown-ring-wrapper">
+            <svg class="cooldown-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="cooldown-attack-ring" class="ring-fg glow-stroke-green" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <span class="cooldown-key">SPACE</span>
+          </div>
+          <span class="cooldown-label">ATTACK</span>
+        </div>
+
+        <div class="cooldown-item">
+          <div class="cooldown-ring-wrapper">
+            <svg class="cooldown-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="cooldown-shield-ring" class="ring-fg glow-stroke-yellow" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <span class="cooldown-key">L-CLK</span>
+          </div>
+          <span class="cooldown-label">SHIELD</span>
+        </div>
+      </div>
+
+      <!-- Floating Cyber-Net HUD Chat Console (bottom-left) -->
+      <div id="hud-chat-box" class="hud-chat-box">
+        <div id="hud-chat-messages" class="hud-chat-messages"></div>
+        <div class="hud-chat-input-wrapper hidden" id="hud-chat-input-wrapper">
+          <input type="text" id="hud-chat-input" maxlength="60" placeholder="COM-SIGNAL... [ENTER]" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCH RESULTS MODAL -->
+    <div id="results-screen" class="screen hidden">
+      <div class="cyber-results glow-pink">
+        <h2 id="results-winner-text" class="results-winner glow-text-pink">CYBERPUNK WINS</h2>
+        <div class="results-sub">// CORE TERMINATION RESOLUTION //</div>
+
+        <div class="results-stats">
+          <div class="stat-row">
+            <span class="stat-label">ROUND SCORE</span>
+            <span id="results-score" class="stat-value">3 - 1</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">COMBAT OUTCOME</span>
+            <span id="results-outcome-text" class="stat-value text-green">MATCH ACQUIRED</span>
+          </div>
+        </div>
+
+        <div class="results-actions">
+          <button id="rematch-btn" class="cyber-btn glow-cyan">
+            <span class="btn-text">INITIATE REMATCH</span>
+          </button>
+          
+          <button id="results-exit-btn" class="cyber-btn-secondary glow-red-text">
+            <span class="btn-text">RETURN TO COM-PORT</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Game Source Code Modules -->
+  <script src="js/audio.js?v=2.0.14"></script>
+  <script src="js/client.js?v=2.0.14"></script>
+  <script src="js/game.js?v=2.0.14"></script>
+</body>
+</html>
