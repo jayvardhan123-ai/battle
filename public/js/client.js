@@ -528,9 +528,11 @@ socket.on('effect', (data) => {
 
   switch (data.type) {
     case 'slash_trigger':
-      scene.triggerSwordSlash(data.playerId, data.angle);
-      // Play swipe sound FX
-      CyberSynth.playSlash();
+      // Ignore redundant server events for local player since we predict visuals instantly
+      if (data.playerId !== myId) {
+        scene.triggerSwordSlash(data.playerId, data.angle);
+        CyberSynth.playSlash();
+      }
       break;
 
     case 'dash':

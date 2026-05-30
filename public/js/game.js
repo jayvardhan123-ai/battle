@@ -567,6 +567,10 @@ class GameDuelScene extends Phaser.Scene {
       if (!isChatting && Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.attackCooldown <= 0 && !lp.isDashing && (!sp || !sp.isAttacking)) {
         this.attackCooldown = this.attackMaxCooldown;
         isAttackingThisFrame = true;
+        
+        // Zero-latency client prediction for local attack visual & audio!
+        this.triggerSwordSlash(this.localPlayerId, angle);
+        CyberSynth.playSlash();
       }
 
       // Determine movement velocities for client local simulation
@@ -974,6 +978,29 @@ class GameDuelScene extends Phaser.Scene {
         this.centerText.setY(400); // Reset Y coordinate back to center for countdowns
         this.centerText.setFontSize('4.5rem');
       }
+    });
+  }
+
+  // Visuals & Particles: Dash starting neon spark burst
+  triggerDashEffect(id) {
+    const lp = this.players[id];
+    if (!lp) return;
+    
+    // Spawn a quick neon dust/spark burst at the start coordinates of the dash
+    const sparks = this.add.particles(lp.container.x, lp.container.y, 'spark', {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.0, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      lifespan: 300,
+      maxParticles: 10,
+      tint: lp.color
+    });
+    sparks.setDepth(1);
+    this.activeEmitters.push(sparks);
+    this.time.delayedCall(500, () => {
+      sparks.destroy();
+      this.activeEmitters = this.activeEmitters.filter(e => e !== sparks);
     });
   }
 

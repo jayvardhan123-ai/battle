@@ -333,7 +333,8 @@ function updateRoomPhysics(room, dt) {
           player.attackStage = 'STARTUP';
           player.attackTimer = ATTACK_STARTUP;
           player.attackCooldownTimer = ATTACK_COOLDOWN;
-          io.to(room.id).emit('effect', { type: 'slash_trigger', playerId: id, angle: player.angle });
+          player.attackAngle = inputs.angle !== undefined ? inputs.angle : player.angle; // Lock the authoritative client-side trigger angle
+          io.to(room.id).emit('effect', { type: 'slash_trigger', playerId: id, angle: player.attackAngle });
         }
       }
     }
@@ -534,6 +535,9 @@ function updateRoomPhysics(room, dt) {
 function checkAttackHits(room, attackerId) {
   const attacker = room.players[attackerId];
   const playerIds = Object.keys(room.players);
+  
+  // Use locked attackAngle or fallback to current angle if somehow missing
+  const attackAngle = attacker.attackAngle !== undefined ? attacker.attackAngle : attacker.angle;
 
   playerIds.forEach(targetId => {
     if (targetId === attackerId) return;
@@ -549,7 +553,7 @@ function checkAttackHits(room, attackerId) {
     if (dist <= ATTACK_RANGE + PLAYER_RADIUS) {
       // Calculate angular check to verify if opponent falls inside the slash cone
       const angleToTarget = Math.atan2(dy, dx);
-      let angleDiff = Math.abs(angleToTarget - attacker.angle);
+      let angleDiff = Math.abs(angleToTarget - attackAngle);
       
       // Normalize angle difference to [0, Math.PI]
       if (angleDiff > Math.PI) {
